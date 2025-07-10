@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/fachru/backend/controllers"
 	// Import all your handler packages here
 	// Example:
 	// "your_project/handler/studio"
