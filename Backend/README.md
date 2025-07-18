@@ -1,39 +1,47 @@
 
 ---
 
-## Health Check dan Logging Endpoint
+# Health Check dan Logging Endpoint
 
-Gunakan perintah berikut untuk melakukan pengecekan status aplikasi dan melihat log aktivitas terkait database.
+Dokumen ini menjelaskan cara melakukan pengecekan status layanan aplikasi serta melihat log aktivitas yang berkaitan dengan database.
 
-### Basic API Health Check
+## API Health Check
 
-Memeriksa apakah layanan API berjalan dengan normal:
+Gunakan perintah berikut untuk memeriksa apakah layanan API berjalan dengan normal:
 
 ```bash
 curl http://localhost:8080/api/v1/health
 ```
 
-### Detail Log Database
+## Log Aktivitas Database
 
-Menampilkan informasi log aplikasi yang berhubungan dengan database:
+Untuk menampilkan informasi log aplikasi yang berhubungan dengan database, gunakan perintah berikut:
 
 ```bash
 curl http://localhost:8080/api/v1/logs
 ```
 
-### Web Health Check
+## Web Health Check
 
-Melakukan pengecekan status aplikasi melalui halaman web:
+Untuk melakukan pengecekan status aplikasi melalui halaman web, gunakan perintah berikut:
 
 ```bash
 curl http://localhost:8080/web/health
+```
+
+## Menjalankan Aplikasi
+
+Gunakan perintah berikut untuk menjalankan aplikasi:
+
+```bash
+go run cdm/server/main.go
 ```
 
 ---
 
 ## Contoh Log Aplikasi
 
-Contoh log yang muncul saat aplikasi berhasil dijalankan:
+Berikut adalah contoh log yang muncul ketika aplikasi berhasil dijalankan:
 
 ```
 2024/01/20 10:30:00 Successfully connected to PostgreSQL database
@@ -41,9 +49,9 @@ Contoh log yang muncul saat aplikasi berhasil dijalankan:
 2024/01/20 10:30:00 Database migration completed successfully
 ```
 
-### Contoh Log Error
+## Contoh Log Error
 
-Contoh log jika terjadi kegagalan koneksi ke database:
+Contoh log berikut menunjukkan kegagalan saat mencoba terhubung ke database:
 
 ```
 2024/01/20 10:30:00 Failed to connect to database: dial tcp 127.0.0.1:5432: connect: connection refused

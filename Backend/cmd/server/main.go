@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,6 +19,17 @@ import (
 	"github.com/fachru/backend/handlers"
 	"github.com/fachru/backend/middleware"
 )
+
+// ✅ Tambahkan fungsi ini untuk cek koneksi DB
+func CheckDBConnection(db *sql.DB) error {
+	var now time.Time
+	err := db.QueryRow("SELECT NOW()").Scan(&now)
+	if err != nil {
+		return err
+	}
+	log.Printf("✅ PostgreSQL connected. Server time: %v", now)
+	return nil
+}
 
 func main() {
 	// Load environment variables
@@ -38,6 +50,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// ✅ Jalankan test koneksi PostgreSQL
+	if err := CheckDBConnection(db.DB); err != nil {
+		log.Fatalf("Failed to test DB connection: %v", err)
+	}
+
 	// Run database migration
 	if err := db.RunMigration(); err != nil {
 		log.Printf("Warning: Migration failed: %v", err)
@@ -55,14 +72,13 @@ func main() {
 
 	router := gin.Default()
 
-	// Add CORS middleware for frontend communication
+	// Add CORS middleware
 	router.Use(middleware.CORSMiddleware())
 
 	// Initialize handlers
 	apiHandler := handlers.NewAPIHandler(db)
-//	webHandler := handlers.NewWebHandler()
 
-	// Serve static files from frontend build (untuk production)
+	// Serve static files for production
 	if cfg.App.Environment == "production" {
 		router.Static("/static", "../frontend/dist/static")
 		router.StaticFile("/", "../frontend/dist/index.html")
@@ -71,27 +87,12 @@ func main() {
 	// API routes
 	api := router.Group("/api/v1")
 	{
-		// Health check endpoint
 		api.GET("/health", apiHandler.HealthCheck)
-		
-		// Logs endpoints
 		api.GET("/logs", apiHandler.GetLogs)
 		api.POST("/logs", apiHandler.CreateLog)
-		
-		// Dashboard data endpoints
 		api.GET("/dashboard/data", apiHandler.GetDashboardData)
 		api.GET("/map/data", apiHandler.GetMapData)
 	}
-
-	// Web routes (untuk development atau jika masih menggunakan server-side rendering)
-	// if cfg.App.Environment != "production" {
-	// 	web := router.Group("/web")
-	// 	{
-	// 		web.GET("/", webHandler.Dashboard)
-	// 		web.GET("/map", webHandler.Map)
-	// 		web.GET("/dashboard", webHandler.Dashboard)
-	// 	}
-	// }
 
 	// HTTP server config
 	server := &http.Server{
@@ -107,7 +108,7 @@ func main() {
 		}
 	}()
 
-	// Wait for SIGINT or SIGTERM
+	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
