@@ -15,6 +15,8 @@ import (
 
 	"github.com/fachru/backend/config"
 	"github.com/fachru/backend/database"
+	"github.com/fachru/backend/handlers"
+	"github.com/fachru/backend/middleware"
 )
 
 func main() {
@@ -36,6 +38,16 @@ func main() {
 	}
 	defer db.Close()
 
+	// Run database migration
+	if err := db.RunMigration(); err != nil {
+		log.Printf("Warning: Migration failed: %v", err)
+	}
+
+	// Log successful startup
+	if err := db.LogMessage("Application started successfully", "info"); err != nil {
+		log.Printf("Failed to log startup: %v", err)
+	}
+
 	// Setup Gin router
 	if cfg.App.Environment == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -43,20 +55,43 @@ func main() {
 
 	router := gin.Default()
 
-	// Load HTML templates and static files
-	router.LoadHTMLGlob("web/templates/*")
-	router.Static("/static", "./web/static")
+	// Add CORS middleware for frontend communication
+	router.Use(middleware.CORSMiddleware())
 
-	// Routes
-	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "dashboard.html", gin.H{"title": "Looker Studio Dashboard"})
-	})
-	router.GET("/map", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "map.html", gin.H{"title": "Interactive Map"})
-	})
-	router.GET("/dashboard", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "dashboard.html", gin.H{"title": "Data Dashboard"})
-	})
+	// Initialize handlers
+	apiHandler := handlers.NewAPIHandler(db)
+//	webHandler := handlers.NewWebHandler()
+
+	// Serve static files from frontend build (untuk production)
+	if cfg.App.Environment == "production" {
+		router.Static("/static", "../frontend/dist/static")
+		router.StaticFile("/", "../frontend/dist/index.html")
+	}
+
+	// API routes
+	api := router.Group("/api/v1")
+	{
+		// Health check endpoint
+		api.GET("/health", apiHandler.HealthCheck)
+		
+		// Logs endpoints
+		api.GET("/logs", apiHandler.GetLogs)
+		api.POST("/logs", apiHandler.CreateLog)
+		
+		// Dashboard data endpoints
+		api.GET("/dashboard/data", apiHandler.GetDashboardData)
+		api.GET("/map/data", apiHandler.GetMapData)
+	}
+
+	// Web routes (untuk development atau jika masih menggunakan server-side rendering)
+	// if cfg.App.Environment != "production" {
+	// 	web := router.Group("/web")
+	// 	{
+	// 		web.GET("/", webHandler.Dashboard)
+	// 		web.GET("/map", webHandler.Map)
+	// 		web.GET("/dashboard", webHandler.Dashboard)
+	// 	}
+	// }
 
 	// HTTP server config
 	server := &http.Server{
@@ -76,7 +111,13 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
 	log.Println("Shutting down server...")
+
+	// Log shutdown
+	if err := db.LogMessage("Application shutting down", "info"); err != nil {
+		log.Printf("Failed to log shutdown: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
