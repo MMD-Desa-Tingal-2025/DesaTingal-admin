@@ -8,6 +8,11 @@ import (
     "time"
 
     _ "github.com/lib/pq"
+
+    "path/filepath"
+    "github.com/golang-migrate/migrate/v4"
+    "github.com/golang-migrate/migrate/v4/database/postgres"
+    _ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 type PostgresDB struct {
@@ -131,6 +136,37 @@ func (p *PostgresDB) RunMigration() error {
     
     log.Println("Database migration completed successfully")
     return nil
+}
+
+func (p *PostgresDB) RunSQLMigration() error {
+	driver, err := postgres.WithInstance(p.DB, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to create migration driver: %w", err)
+	}
+
+	// Lokasi folder migrations
+	path, err := filepath.Abs("./migrations")
+	if err != nil {
+		return fmt.Errorf("failed to resolve migration path: %w", err)
+	}
+    // Ganti backslash dengan slash untuk kompatibilitas
+    fixedPath := filepath.ToSlash(path)
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://" + fixedPath,
+		"postgres", driver,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize migration: %w", err)
+	}
+
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("migration failed: %w", err)
+	}
+
+	log.Println("SQL migrasi berhasil dijalankan.")
+	return nil
 }
 
 // LogMessage logs a message to the database

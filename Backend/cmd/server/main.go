@@ -18,16 +18,19 @@ import (
 	"github.com/fachru/backend/database"
 	"github.com/fachru/backend/handlers"
 	"github.com/fachru/backend/middleware"
+
+	_ "github.com/lib/pq"
+    _ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-// ✅ Tambahkan fungsi ini untuk cek koneksi DB
+// Tambahkan fungsi ini untuk cek koneksi DB
 func CheckDBConnection(db *sql.DB) error {
 	var now time.Time
 	err := db.QueryRow("SELECT NOW()").Scan(&now)
 	if err != nil {
 		return err
 	}
-	log.Printf("✅ PostgreSQL connected. Server time: %v", now)
+	log.Printf("PostgreSQL connected. Server time: %v", now)
 	return nil
 }
 
@@ -50,13 +53,13 @@ func main() {
 	}
 	defer db.Close()
 
-	// ✅ Jalankan test koneksi PostgreSQL
+	// Jalankan test koneksi PostgreSQL
 	if err := CheckDBConnection(db.DB); err != nil {
 		log.Fatalf("Failed to test DB connection: %v", err)
 	}
 
 	// Run database migration
-	if err := db.RunMigration(); err != nil {
+	if err := db.RunSQLMigration(); err != nil {
 		log.Printf("Warning: Migration failed: %v", err)
 	}
 
@@ -127,4 +130,6 @@ func main() {
 	}
 
 	log.Println("Server exited")
+
+
 }

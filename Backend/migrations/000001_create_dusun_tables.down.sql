@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS statistik_dusun;
+DROP TABLE IF EXISTS dusun;
